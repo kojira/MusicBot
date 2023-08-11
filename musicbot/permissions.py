@@ -137,7 +137,9 @@ class Permissions:
         # We loop again so that we don't return a role based group before we find an assigned one
         for group in self.groups:
             for role in user.roles:
-                if role.id in group.granted_to_roles:
+                if str(role.id) in group.granted_to_roles:
+                    return group
+                elif role.name in group.granted_to_roles:
                     return group
 
         return self.default_group
@@ -210,7 +212,7 @@ class PermissionGroup:
             self.ignore_non_voice = set(self.ignore_non_voice.lower().split())
 
         if self.granted_to_roles:
-            self.granted_to_roles = set([int(x) for x in self.granted_to_roles.split()])
+            self.granted_to_roles = set([x for x in self.granted_to_roles.split()])
 
         if self.user_list:
             self.user_list = set([int(x) for x in self.user_list.split()])
