@@ -19,6 +19,8 @@ from .exceptions import FFmpegError, FFmpegWarning
 from .lib.event_emitter import EventEmitter
 from .utils import avg
 
+from . import nana
+
 log = logging.getLogger(__name__)
 
 
@@ -340,6 +342,9 @@ class MusicPlayer(EventEmitter, Serializable):
                     "Playing {0} using {1}".format(self._source, self.voice_client)
                 )
                 self.voice_client.play(self._source, after=self._playback_finished)
+
+                if entry.api_url:
+                    await nana.countup_play_count(entry.api_url)
 
                 self._current_player = self.voice_client
 

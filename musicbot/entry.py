@@ -119,7 +119,7 @@ def get(program):
 
 class URLPlaylistEntry(BasePlaylistEntry):
     def __init__(
-        self, playlist, url, title, duration=None, expected_filename=None, **meta
+        self, playlist, url, title, duration=None, expected_filename=None, api_url=None, **meta
     ):
         super().__init__()
 
@@ -139,6 +139,7 @@ class URLPlaylistEntry(BasePlaylistEntry):
         self.aoptions = "-vn"
 
         self.download_folder = self.playlist.downloader.download_folder
+        self.api_url = api_url
 
     def __json__(self):
         return self._enclose_json(
@@ -153,6 +154,7 @@ class URLPlaylistEntry(BasePlaylistEntry):
                 "full_filename": os.path.abspath(self.filename)
                 if self.filename
                 else self.filename,
+                "api_url": self.api_url,
                 "meta": {
                     name: {
                         "type": obj.__class__.__name__,
@@ -180,6 +182,7 @@ class URLPlaylistEntry(BasePlaylistEntry):
             )
             filename = data["filename"] if downloaded else None
             expected_filename = data["expected_filename"]
+            api_url = data["api_url"] if "api_url" in data else None
             meta = {}
 
             # TODO: Better [name] fallbacks
@@ -208,7 +211,7 @@ class URLPlaylistEntry(BasePlaylistEntry):
                         )
                         meta.pop("author")
 
-            entry = cls(playlist, url, title, duration, expected_filename, **meta)
+            entry = cls(playlist, url, title, duration, expected_filename, api_url, **meta)
             entry.filename = filename
 
             return entry
@@ -452,6 +455,10 @@ class URLPlaylistEntry(BasePlaylistEntry):
             log.critical("YTDL has failed, everyone panic")
             raise ExtractionError("ytdl broke and hell if I know why")
             # What the fuck do I do now?
+
+        org_title = result.get("title_")
+        if org_title:
+            result["title"] = org_title
 
         self.filename = unhashed_fname = self.playlist.downloader.ytdl.prepare_filename(
             result

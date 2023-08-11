@@ -62,6 +62,12 @@ class Downloader:
         If `on_error` is passed and an exception is raised, the exception will be caught and passed to
         on_error as an argument.
         """
+        nana_info = None
+        if args[0].startswith("https://nana-music.com/sounds/"):
+            from . import nana
+            song_url = args[0]
+            nana_info = await nana.get_sound_info(song_url)
+            args = (nana_info["sound_url"],)
 
         # converting Spotify URL to URI for the bot to use
         def convert_url_to_uri(url):
@@ -81,10 +87,16 @@ class Downloader:
 
         if callable(on_error):
             try:
-                return await loop.run_in_executor(
+                info = await loop.run_in_executor(
                     self.thread_pool,
                     functools.partial(self.unsafe_ytdl.extract_info, *args, **kwargs),
                 )
+                if nana_info:
+                    info['title_'] = info['title']
+                    info['title'] = nana_info["title"] + " by " + nana_info['user_name']
+                    info['api_url'] = nana_info['api_url']
+
+                return info
 
             except Exception as e:
                 # (youtube_dl.utils.ExtractorError, youtube_dl.utils.DownloadError)
@@ -99,15 +111,30 @@ class Downloader:
                     loop.call_soon_threadsafe(on_error, e)
 
                 if retry_on_error:
-                    return await self.safe_extract_info(loop, *args, **kwargs)
+                    info = await self.safe_extract_info(loop, *args, **kwargs)
+                    if nana_info:
+                        info['title_'] = info['title']
+                        info['title'] = nana_info["title"] + " by " + nana_info['user_name']
+                        info['api_url'] = nana_info['api_url']
+                    return info
         else:
-            return await loop.run_in_executor(
+            info = await loop.run_in_executor(
                 self.thread_pool,
                 functools.partial(self.unsafe_ytdl.extract_info, *args, **kwargs),
             )
+            if nana_info:
+                info['title_'] = info['title']
+                info['title'] = nana_info["title"] + " by " + nana_info['user_name']
+                info['api_url'] = nana_info['api_url']
+            return info
 
     async def safe_extract_info(self, loop, *args, **kwargs):
-        return await loop.run_in_executor(
+        info = await loop.run_in_executor(
             self.thread_pool,
             functools.partial(self.safe_ytdl.extract_info, *args, **kwargs),
         )
+        if nana_info:
+            info['title_'] = info['title']
+            info['title'] = nana_info["title"] + " by " + nana_info['user_name']
+            info['api_url'] = nana_info['api_url']
+        return info
